@@ -40,7 +40,7 @@ class SmsReceiver : BroadcastReceiver() {
     }
 
     private fun getAliorCodeMessage(message: String): String {
-        val indexOfColon = message.indexOf(':')
+        val indexOfColon = message.indexOfLast { it == ':' }
         return message.substring(indexOfColon + 2, message.length)
     }
 
