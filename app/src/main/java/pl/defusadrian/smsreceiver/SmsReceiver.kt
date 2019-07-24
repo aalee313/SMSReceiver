@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.*
 import android.provider.Settings
 import android.provider.Telephony
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.smsreceiver.R
 
@@ -13,9 +12,6 @@ class SmsReceiver : BroadcastReceiver() {
 
     companion object {
         private const val CHANNEL_ID = "SMS_Receiver"
-
-        private const val ALIOR_SMS = "Kod SMS"
-        private const val ING_SMS = "Kod do autoryzacji"
     }
 
     override fun onReceive(context: Context, intent: Intent?) {
@@ -23,32 +19,22 @@ class SmsReceiver : BroadcastReceiver() {
         messagesFromIntent.forEach {
             val displayMessageBody = it.displayMessageBody
 
-            val codeMessage = when {
-                displayMessageBody.contains(ALIOR_SMS) -> getAliorCodeMessage(displayMessageBody)
-                displayMessageBody.contains(ING_SMS) -> getINGCodeMessage(displayMessageBody)
-                else -> ""
+            var codeMessage: String? = null
+            for (i in 8 downTo 6) {
+                codeMessage = findXDigitNumber(i).find(displayMessageBody)?.value
+                if (codeMessage != null) break
             }
 
-            if (codeMessage.isNotEmpty()) {
+            codeMessage?.apply {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText(codeMessage, codeMessage)
+                val clip = ClipData.newPlainText(this, this)
                 clipboard.primaryClip = clip
-                showNotification(context, codeMessage)
-                Toast.makeText(context, codeMessage, Toast.LENGTH_LONG).show()
+                showNotification(context, this)
             }
         }
     }
 
-    private fun getAliorCodeMessage(message: String): String {
-        val indexOfColon = message.indexOfLast { it == ':' }
-        return message.substring(indexOfColon + 2, message.length)
-    }
-
-    private fun getINGCodeMessage(message: String): String {
-        val indexOfColon = message.indexOf(':')
-        val indexOfStars = message.indexOf('*')
-        return message.substring(indexOfColon + 2, indexOfStars - 1)
-    }
+    private fun findXDigitNumber(digitNumber: Int) = "(?<!\\d)\\d{$digitNumber}(?!\\d)".toRegex()
 
     private fun showNotification(context: Context, message: String) {
         val channel = NotificationChannel(
@@ -72,5 +58,4 @@ class SmsReceiver : BroadcastReceiver() {
         notificationManager.createNotificationChannel(channel)
         notificationManager.notify(0, notificationBuilder.build())
     }
-
 }
